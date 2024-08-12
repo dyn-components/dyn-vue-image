@@ -1,0 +1,7 @@
+{
+  "vueDependencies": {},
+  "reactDependencies": {},
+  "webComponentsDependencies": {
+    "dialog": "0.0.1"
+  }
+}
