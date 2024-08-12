@@ -11,6 +11,8 @@ import { ref } from 'vue';
 const dialogRef = ref()
 const previewSwiperRef = ref()
 const dialogVisble = ref(false)
+const activeIndex = ref(0)
+const activeIndexZoom = ref<number>(1);
 
 const props = withDefaults(defineProps<{
   src: string,
@@ -30,7 +32,7 @@ const onClick = (_event: MouseEvent) => {
       loop: true,  // 启用无限循环轮播
       pagination: {
         el: ".swiper-pagination",
-        // type: "progressbar",
+        type: "progressbar",
         clickable: true,
       },
       navigation: {
@@ -45,9 +47,11 @@ const onClick = (_event: MouseEvent) => {
 
     swiper.on('slideChange', () => {
       const images = document.querySelectorAll('img.preview-img') as any as HTMLImageElement[];
-  for (const image of images) {
-    image.style.transform = 'scale(1)';
-  }
+      for (const image of images) {
+        image.style.transform = 'scale(1)';
+      }
+      activeIndex.value = swiper.realIndex;
+      activeIndexZoom.value = 1;
     });
   }
 }
@@ -65,6 +69,28 @@ const onImageWheel = (event: WheelEvent) => {
   }
   
   image.style.transform = `scale(${scale})`;
+  activeIndexZoom.value = scale;
+}
+
+const onPre = () => {
+  previewSwiperRef.value?.swiper.slidePrev();
+}
+
+const onNext = () => {
+  previewSwiperRef.value?.swiper.slideNext();
+}
+
+const onZoomIn = () => {
+  activeIndexZoom.value = Math.max(activeIndexZoom.value - 0.1, 0.1);
+  // 设置当前激活的swiper item内的图片样式
+  const images = document.querySelectorAll('img.preview-img') as any as HTMLImageElement[];
+  images[activeIndex.value].style.transform = `scale(${activeIndexZoom.value})`;
+}
+
+const onZoomOut = () => {
+  activeIndexZoom.value = activeIndexZoom.value + 0.1;
+  const images = document.querySelectorAll('img.preview-img') as any as HTMLImageElement[];
+  images[activeIndex.value].style.transform = `scale(${activeIndexZoom.value})`;
 }
 </script>
 
@@ -86,6 +112,19 @@ const onImageWheel = (event: WheelEvent) => {
         <div class="swiper-button-prev"></div>
         <div class="swiper-pagination"></div>
       </div>
+      <div class="toolbar">
+        <div>
+          <span class="prev" @click="onPre"></span>
+          <span class="count">{{ activeIndex + 1 }} / {{ previewSwiperRef?.swiper?.slides?.length }}</span>
+          <span class="next" @click="onNext"></span>
+        </div>
+        <div class="zoom">
+          <span class="zoom-in" @click="onZoomIn">-</span>
+          <span class="zoom-percent">{{ Math.round(activeIndexZoom * 100) }}%</span>
+          <span class="zoom-out" @click="onZoomOut">+</span>
+        </div>
+        
+      </div>
     </div> 
   </dyn-web-dialog>
 </template>
@@ -93,6 +132,7 @@ const onImageWheel = (event: WheelEvent) => {
 <style lang="scss" scoped>
   .preview-container, .swiper {
     height: 100%;
+    user-select: none;
   } 
 
   .swiper {
@@ -100,6 +140,51 @@ const onImageWheel = (event: WheelEvent) => {
       transform-origin: center center;
       transform: scale(1);
       transition: all 0.3s ease;
+    }
+  }
+
+  .toolbar {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    padding: 10px;
+    transform: translate(-50%, 0);
+    z-index: 100;
+  
+    .prev, .next {
+      display: inline-block;
+      font-family: swiper-icons;
+      cursor: pointer;
+      padding: 5px;
+      margin: 10px;
+      &:hover {
+        filter: brightness(1.5);
+      }
+    }
+    .prev {
+      &:after {
+        content: 'prev';
+      }
+    }
+    .next {
+      &:after {
+        content: 'next';
+      }
+    }
+
+    .zoom-in, .zoom-out {
+      display: inline-block;
+      cursor: pointer;
+      padding: 5px;
+      margin: 10px;
+      font-size: 15px;
+      font-weight: bold;
+      &:hover {
+        filter: brightness(1.5);
+      }
     }
   }
 </style>
