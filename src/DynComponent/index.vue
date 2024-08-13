@@ -10,6 +10,7 @@ import { ref } from 'vue';
 
 const dialogRef = ref()
 const previewSwiperRef = ref()
+const previewImagesRef = ref([])
 const dialogVisble = ref(false)
 const activeIndex = ref(0)
 const activeIndexZoom = ref<number>(1);
@@ -21,11 +22,23 @@ const props = withDefaults(defineProps<{
   previewSrcList: () => []
 }); 
 
+// HEX 转换为 RGB
+function hexToRgb(hex: string) {
+  hex = hex.replace('#', '');
+  const bigint = parseInt(hex, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return `${r}, ${g}, ${b}`;
+}
+
 const onClick = (_event: MouseEvent) => {
   dialogVisble.value = true
 
   if (dialogRef.value?.dialog) {
-    dialogRef.value.dialog.style.backgroundColor = `rgba(0, 0, 0, 0.8)`;
+    const hexColor = getComputedStyle(dialogRef.value).getPropertyValue('--dyn-background-color').trim();
+    const rgbColor = hexToRgb(hexColor);
+    dialogRef.value.dialog.style.backgroundColor = `rgba(${rgbColor}, 0.6)`;
     const swiper = new Swiper(previewSwiperRef.value, {
       modules: [Navigation, Pagination, Zoom],
       zoom: false, // 双击缩放
@@ -46,7 +59,7 @@ const onClick = (_event: MouseEvent) => {
     });
 
     swiper.on('slideChange', () => {
-      const images = document.querySelectorAll('img.preview-img') as any as HTMLImageElement[];
+      const images = previewImagesRef.value as any as HTMLImageElement[];
       for (const image of images) {
         image.style.transform = 'scale(1)';
       }
@@ -83,13 +96,13 @@ const onNext = () => {
 const onZoomIn = () => {
   activeIndexZoom.value = Math.max(activeIndexZoom.value - 0.1, 0.1);
   // 设置当前激活的swiper item内的图片样式
-  const images = document.querySelectorAll('img.preview-img') as any as HTMLImageElement[];
+  const images = previewImagesRef.value as any as HTMLImageElement[];
   images[activeIndex.value].style.transform = `scale(${activeIndexZoom.value})`;
 }
 
 const onZoomOut = () => {
   activeIndexZoom.value = activeIndexZoom.value + 0.1;
-  const images = document.querySelectorAll('img.preview-img') as any as HTMLImageElement[];
+  const images = previewImagesRef.value as any as HTMLImageElement[];
   images[activeIndex.value].style.transform = `scale(${activeIndexZoom.value})`;
 }
 </script>
@@ -103,7 +116,7 @@ const onZoomOut = () => {
           <template v-for="previewItem in props.previewSrcList">
             <div class="swiper-slide">
               <div class="swiper-zoom-container"> 
-                <img class="preview-img" :src="previewItem" :alt="previewItem" @wheel="onImageWheel">
+                <img ref="previewImagesRef" class="preview-img" :src="previewItem" :alt="previewItem" @wheel="onImageWheel">
               </div>
             </div>
           </template>

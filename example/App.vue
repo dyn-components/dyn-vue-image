@@ -20,6 +20,16 @@ import DynComponent from "../src";
   </main>
 </template>
 
+<style lang="scss">
+body {
+  margin: 0;
+  padding: 0;
+  background-color: map-get($map: $theme, $key: "background-color");
+  color: map-get($map: $theme, $key: "text-color");
+  height: 100vh;
+}
+</style>
+
 <style lang="scss" scoped>
 .dyn-container {
 }
