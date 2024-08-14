@@ -5,6 +5,7 @@ import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import 'swiper/css/zoom';
 import Swiper from 'swiper';
+import { SwiperOptions } from 'swiper/types';
 import { Navigation, Pagination, Zoom } from 'swiper/modules';
 import { ref } from 'vue';
 
@@ -15,7 +16,7 @@ const activeIndex = ref(0)
 const activeIndexZoom = ref<number>(1);
 
 const props = withDefaults(defineProps<{
-  src: string,
+  src?: string,
   previewSrcList?: string[],
   initialIndex?: number
 }>(), {
@@ -34,15 +35,18 @@ function hexToRgb(hex: string) {
 }
 
 let swiper: Swiper | null = null
-const onClick = (_event: MouseEvent) => {
+const onPreview = (swiperOptions?: SwiperOptions) => {
   if (!dialogRef.value?.dialog || swiper) {
     return
+  }
+  if (swiperOptions instanceof Event) {
+    swiperOptions = undefined
   }
   dialogVisble.value = true
   const hexColor = getComputedStyle(dialogRef.value).getPropertyValue('--dyn-background-color').trim();
   const rgbColor = hexToRgb(hexColor);
   dialogRef.value.dialog.style.backgroundColor = `rgba(${rgbColor}, 0.6)`;
-  swiper = new Swiper(previewSwiperRef.value, {
+  swiper = new Swiper(previewSwiperRef.value, Object.assign({
     modules: [Navigation, Pagination, Zoom],
     zoom: false, // 双击缩放
     loop: true,  // 启用无限循环轮播
@@ -60,7 +64,7 @@ const onClick = (_event: MouseEvent) => {
     //   delay: 3000,  // 设置自动播放的时间间隔（毫秒）
     //   disableOnInteraction: false,  // 用户操作后是否禁用自动播放
     // },
-  });
+  }, swiperOptions));
 
   swiper.on('slideChange', () => {
     const images = previewSwiperRef.value!.querySelectorAll('img.preview-img') as HTMLImageElement[];
@@ -119,7 +123,9 @@ const onDialogClose = () => {
 </script>
 
 <template>
-  <img class="dyn-component--vue dyn-image" :src="src" @click="onClick" v-bind="$attrs"></img>
+  <slot v-bind="{ onPreview }">
+    <img class="dyn-component--vue dyn-image" :src="src" @click="() => onPreview()" v-bind="$attrs"></img>
+  </slot>
   <dyn-web-dialog ref="dialogRef" :open="dialogVisble" fullscreen modal closeable @close="onDialogClose">
     <div class="preview-container">
       <div ref="previewSwiperRef" class="swiper preview-swiper">
