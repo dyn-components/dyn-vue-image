@@ -8,17 +8,19 @@ import Swiper from 'swiper';
 import { Navigation, Pagination, Zoom } from 'swiper/modules';
 import { ref } from 'vue';
 
-const dialogRef = ref()
-const previewSwiperRef = ref()
+const dialogRef = ref<any>()
+const previewSwiperRef = ref<any>()
 const dialogVisble = ref(false)
 const activeIndex = ref(0)
 const activeIndexZoom = ref<number>(1);
 
 const props = withDefaults(defineProps<{
   src: string,
-  previewSrcList: string[]
+  previewSrcList?: string[],
+  initialIndex?: number
 }>(), {
-  previewSrcList: () => []
+  previewSrcList: () => [],
+  initialIndex: 0
 }); 
 
 // HEX 转换为 RGB
@@ -31,41 +33,43 @@ function hexToRgb(hex: string) {
   return `${r}, ${g}, ${b}`;
 }
 
+let swiper: Swiper | null = null
 const onClick = (_event: MouseEvent) => {
-  dialogVisble.value = true
-
-  if (dialogRef.value?.dialog) {
-    const hexColor = getComputedStyle(dialogRef.value).getPropertyValue('--dyn-background-color').trim();
-    const rgbColor = hexToRgb(hexColor);
-    dialogRef.value.dialog.style.backgroundColor = `rgba(${rgbColor}, 0.6)`;
-    const swiper = new Swiper(previewSwiperRef.value, {
-      modules: [Navigation, Pagination, Zoom],
-      zoom: false, // 双击缩放
-      loop: true,  // 启用无限循环轮播
-      pagination: {
-        el: ".swiper-pagination",
-        type: "progressbar",
-        clickable: true,
-      },
-      navigation: {
-        nextEl: ".swiper-button-next",
-        prevEl: ".swiper-button-prev",
-      },
-      // autoplay: {
-      //   delay: 3000,  // 设置自动播放的时间间隔（毫秒）
-      //   disableOnInteraction: false,  // 用户操作后是否禁用自动播放
-      // },
-    });
-
-    swiper.on('slideChange', () => {
-      const images = previewSwiperRef.value!.querySelectorAll('img.preview-img') as HTMLImageElement[];
-      for (const image of images) {
-        image.style.transform = 'scale(1)';
-      }
-      activeIndex.value = swiper.realIndex;
-      activeIndexZoom.value = 1;
-    });
+  if (!dialogRef.value?.dialog || swiper) {
+    return
   }
+  dialogVisble.value = true
+  const hexColor = getComputedStyle(dialogRef.value).getPropertyValue('--dyn-background-color').trim();
+  const rgbColor = hexToRgb(hexColor);
+  dialogRef.value.dialog.style.backgroundColor = `rgba(${rgbColor}, 0.6)`;
+  swiper = new Swiper(previewSwiperRef.value, {
+    modules: [Navigation, Pagination, Zoom],
+    zoom: false, // 双击缩放
+    loop: true,  // 启用无限循环轮播
+    initialSlide: props.initialIndex,
+    pagination: {
+      el: ".swiper-pagination",
+      type: "progressbar",
+      clickable: true,
+    },
+    navigation: {
+      nextEl: ".swiper-button-next",
+      prevEl: ".swiper-button-prev",
+    },
+    // autoplay: {
+    //   delay: 3000,  // 设置自动播放的时间间隔（毫秒）
+    //   disableOnInteraction: false,  // 用户操作后是否禁用自动播放
+    // },
+  });
+
+  swiper.on('slideChange', () => {
+    const images = previewSwiperRef.value!.querySelectorAll('img.preview-img') as HTMLImageElement[];
+    for (const image of images) {
+      image.style.transform = 'scale(1)';
+    }
+    activeIndex.value = swiper!.realIndex;
+    activeIndexZoom.value = 1;
+  });
 }
 
 const onImageWheel = (event: WheelEvent) => {
@@ -104,11 +108,19 @@ const onZoomOut = () => {
   const images = previewSwiperRef.value!.querySelectorAll('img.preview-img') as HTMLImageElement[];
   images[activeIndex.value].style.transform = `scale(${activeIndexZoom.value})`;
 }
+
+const onDialogClose = () => {
+  dialogVisble.value = false
+  if (swiper) {
+    swiper.destroy();
+    swiper = null;
+  }
+}
 </script>
 
 <template>
   <img class="dyn-component--vue dyn-image" :src="src" @click="onClick" v-bind="$attrs"></img>
-  <dyn-web-dialog ref="dialogRef" :open="dialogVisble" fullscreen modal closeable @close="dialogVisble = false">
+  <dyn-web-dialog ref="dialogRef" :open="dialogVisble" fullscreen modal closeable @close="onDialogClose">
     <div class="preview-container">
       <div ref="previewSwiperRef" class="swiper preview-swiper">
         <div class="swiper-wrapper">
@@ -127,7 +139,7 @@ const onZoomOut = () => {
       <div class="toolbar">
         <div>
           <span class="prev" @click="onPre"></span>
-          <span class="count">{{ activeIndex + 1 }} / {{ previewSwiperRef?.swiper?.slides?.length || 0 }}</span>
+          <span class="count">{{ activeIndex + 1 }} / {{ previewSrcList.length }}</span>
           <span class="next" @click="onNext"></span>
         </div>
         <div class="zoom">
