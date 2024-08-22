@@ -14,6 +14,13 @@ const previewSwiperRef = ref<any>()
 const dialogVisble = ref(false)
 const activeIndex = ref(0)
 const activeIndexZoom = ref<number>(1);
+const isDragging = ref(false);
+const dragInfo = {
+  startLeft: 0,
+  startTop: 0,
+  startClentX: 0,
+  startClentY: 0,
+}
 
 const props = withDefaults(defineProps<{
   src?: string,
@@ -50,6 +57,7 @@ const onPreview = (swiperOptions?: SwiperOptions) => {
     modules: [Navigation, Pagination, Zoom],
     zoom: false, // 双击缩放
     loop: true,  // 启用无限循环轮播
+    allowTouchMove: false,
     initialSlide: props.initialIndex,
     pagination: {
       el: ".swiper-pagination",
@@ -70,15 +78,24 @@ const onPreview = (swiperOptions?: SwiperOptions) => {
     const images = previewSwiperRef.value!.querySelectorAll('img.preview-img') as HTMLImageElement[];
     for (const image of images) {
       image.style.transform = 'scale(1)';
+      image.style.left = '0';
+      image.style.top = '0';
     }
     activeIndex.value = swiper!.realIndex;
     activeIndexZoom.value = 1;
+    isDragging.value = false;
+    Object.assign(dragInfo, {
+      startLeft: 0,
+      startTop: 0,
+      startClentX: 0,
+      startClentY: 0
+    })
   });
 }
 
 const onImageWheel = (event: WheelEvent) => {
   event.preventDefault();
-  const image = event.target as HTMLImageElement;
+  const image = (event.currentTarget as HTMLDivElement).querySelector('img.preview-img') as HTMLImageElement;
   let scale = Number(image.style.transform.match(/scale\((\d+(?:\.\d+)?)\)/)?.[1] || 1);
   const scaleAmount = 0.1;  // 控制缩放的速度
     
@@ -120,6 +137,59 @@ const onDialogClose = () => {
     swiper = null;
   }
 }
+const boundFitDialogPosition = () => {
+}
+const onImageMouseDown = (event: MouseEvent) => {
+  event.preventDefault();
+  const image = (event.currentTarget as HTMLDivElement).querySelector('img.preview-img') as HTMLImageElement;
+  image.style.cursor = 'grabbing';
+ // 暂时禁用 Swiper 的滑动功能
+ if (swiper) {
+  swiper.allowTouchMove = false;  
+ }
+ isDragging.value = true;
+ // 如果拖拽过，则禁用默认自适应image位置功能
+ window.removeEventListener('resize', boundFitDialogPosition);
+//  const rect = image.getBoundingClientRect();
+  Object.assign(dragInfo, {
+    startLeft: image.style.left ? parseInt(image.style.left) : 0,
+    startTop: image.style.top ? parseInt(image.style.top) : 0,
+    startClentX: event.clientX,
+    startClentY: event.clientY,
+  });
+}
+
+const onImageMouseMove = (event: MouseEvent) => {
+  if (!isDragging.value) {
+    return
+  }
+  const image = (event.currentTarget as HTMLDivElement).querySelector('img.preview-img') as HTMLImageElement;
+  image.style.left = `${dragInfo.startLeft + event.clientX  - dragInfo.startClentX}px`;
+  image.style.top = `${dragInfo.startTop + event.clientY - dragInfo.startClentY}px`;
+}
+
+const onImageMouseUp = (event: MouseEvent) => {
+  if (!isDragging.value) {
+    return
+  }
+  const image = event.currentTarget as HTMLImageElement;
+  isDragging.value = false;
+  image.style.cursor = 'default';
+
+  // const rect = image.getBoundingClientRect();
+	// 	if (rect.top < 0) {
+	// 		image.style.top = `${parseInt(image.style.top || '0') - rect.top}px`;
+	// 	}
+	// 	if (rect.top + rect.height > document.documentElement.clientHeight) {
+	// 		image.style.top = `${parseInt(image.style.top || '0') - (rect.top + rect.height - document.documentElement.clientHeight)}px`;
+	// 	}
+	// 	if (rect.left < 0) {
+	// 		image.style.left = `${parseInt(image.style.left || '0') - rect.left}px`;
+	// 	}
+	// 	if (rect.left + rect.width > document.documentElement.clientWidth) {
+	// 		image.style.left = `${parseInt(image.style.left || '0') - (rect.left + rect.width - document.documentElement.clientWidth)}px`;
+	// 	}
+}
 </script>
 
 <template>
@@ -132,8 +202,8 @@ const onDialogClose = () => {
         <div class="swiper-wrapper">
           <template v-for="previewItem in props.previewSrcList">
             <div class="swiper-slide">
-              <div class="swiper-zoom-container"> 
-                <img ref="previewImagesRef" class="preview-img" :src="previewItem" :alt="previewItem" @wheel="onImageWheel">
+              <div class="swiper-zoom-container" @wheel="onImageWheel" @mousedown="onImageMouseDown" @mousemove="onImageMouseMove" @mouseup="onImageMouseUp"> 
+                <img ref="previewImagesRef" class="preview-img" :src="previewItem" :alt="previewItem" /> 
               </div>
             </div>
           </template>
@@ -166,9 +236,10 @@ const onDialogClose = () => {
 
 .swiper {
   .preview-img {
+    position: relative;
     transform-origin: center center;
     transform: scale(1);
-    transition: all 0.3s ease;
+    transition: transform 0.3s ease;
   }
 }
 
