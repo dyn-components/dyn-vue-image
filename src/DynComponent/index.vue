@@ -137,20 +137,16 @@ const onDialogClose = () => {
     swiper = null;
   }
 }
-const boundFitDialogPosition = () => {
-}
 const onImageMouseDown = (event: MouseEvent) => {
   event.preventDefault();
   const image = (event.currentTarget as HTMLDivElement).querySelector('img.preview-img') as HTMLImageElement;
   image.style.cursor = 'grabbing';
- // 暂时禁用 Swiper 的滑动功能
- if (swiper) {
-  swiper.allowTouchMove = false;  
- }
- isDragging.value = true;
- // 如果拖拽过，则禁用默认自适应image位置功能
- window.removeEventListener('resize', boundFitDialogPosition);
-//  const rect = image.getBoundingClientRect();
+  // 暂时禁用 Swiper 的滑动功能
+  if (swiper) {
+    swiper.allowTouchMove = false;  
+  }
+  isDragging.value = true;
+  //  const rect = image.getBoundingClientRect();
   Object.assign(dragInfo, {
     startLeft: image.style.left ? parseInt(image.style.left) : 0,
     startTop: image.style.top ? parseInt(image.style.top) : 0,
